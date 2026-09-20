@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import sys
@@ -43,6 +44,31 @@ for path in files:
                 continue
             if not target.exists():
                 errors.append(f"{path.name}: missing local reference: {raw}")
+
+# Validate the installable web-app manifest and every local icon it declares.
+manifest_path = ROOT / "site.webmanifest"
+if manifest_path.exists():
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"site.webmanifest: invalid JSON: {exc}")
+    else:
+        for key in ("name", "short_name", "start_url", "display", "icons"):
+            if not manifest.get(key):
+                errors.append(f"site.webmanifest: missing required field: {key}")
+        icons = manifest.get("icons", [])
+        if not isinstance(icons, list):
+            errors.append("site.webmanifest: icons must be a list")
+        else:
+            for icon in icons:
+                src = icon.get("src") if isinstance(icon, dict) else None
+                if not src:
+                    errors.append("site.webmanifest: icon is missing src")
+                    continue
+                if src.startswith(("http://", "https://", "data:")):
+                    continue
+                if not (ROOT / src).exists():
+                    errors.append(f"site.webmanifest: missing icon: {src}")
 
 # Guard the product-truth rule for the largest simulated / concept experiences.
 truth_terms = {
