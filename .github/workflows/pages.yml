@@ -45,6 +45,17 @@ jobs:
         if: steps.pages.outputs.enabled == 'true'
         uses: actions/checkout@v4
 
+      - name: Check JavaScript syntax before deploy
+        if: steps.pages.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -maxdepth 1 -name '*.js' -print0 | sort -z | xargs -0 -n1 node --check
+
+      - name: Validate site integrity before deploy
+        if: steps.pages.outputs.enabled == 'true'
+        run: python scripts/validate_site.py
+
       - name: Configure Pages
         if: steps.pages.outputs.enabled == 'true'
         uses: actions/configure-pages@v5
